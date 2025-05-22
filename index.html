@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Claim RWA</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <h2>Claim Your RWA</h2>
+  <button onclick="claim()">Claim</button>
+  <p id="status"></p>
+
+  <script>
+    const CONTRACT_ADDRESS = "0xf40a261EaD1Cf8814A03eD44Df8fB08f5F957C82";
+    const ABI = [
+      "function claim(uint256 fullAmount, bytes32[] calldata proof) external"
+    ];
+
+    const BSC_CHAIN_ID = '0x38'; // 56
+    const BSC_PARAMS = {
+      chainId: BSC_CHAIN_ID,
+      chainName: 'BNB Smart Chain',
+      nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+      rpcUrls: ['https://bsc-dataseed.binance.org/'],
+      blockExplorerUrls: ['https://bscscan.com']
+    };
+
+    const fullAmount = "4280961000000000000000";
+    const proof = [
+      "0x640bc2458cc1ba552acb0b18cdf5302a6d7f6a3026c3e68ae15f733906e792dd",
+      "0x36301066393ab55b1f5912f696f92ba157750c58dc0e06373e337270c78bcc82",
+      "0x24a34931333b210ae76b0147aa63cfdb21ad29fa2b1fe0a511a25e26858eb210",
+      "0xc4d34ce359473cd1709e809750c51f2ecd3e7136147ef534fdf5ad6d1c2dd4f1",
+      "0xca1e8d4919b50ec659b5dc0ff8dd51fffd0e51a9c6f64bbc60ced51f03ae8017",
+      "0x9f43fbf35fd0daefadb2174f710194feb90637b18da0a5db6a755a2fc9ba266e",
+      "0x325d3b31fd0d70f7c0be1998cb5501fcf0561d28b6e95fa8430cef3ac93be9c6",
+      "0xe64235c16df54d577d9ab7d0f0e9c65120220292d0aed12af8560821e393d0f4",
+      "0xbe03ea0374bcb91a987b052f35aaac953feeb6355fd00b009f5786a2fce56303",
+      "0xeb7741f07a97525fd826e8318ada0ad4562d3c91222bb68b72fe193a56c573b8",
+      "0x038e7fb3d892c76e241371b28f97a8fbbb9d0ef5cec5c277ee9e2fac16666227",
+      "0x3f4b8e02986dde425d80f5660ea9a0c181ca0e557ac484b5717b5a297a288fab",
+      "0xd5f77eb202b1e7015afb60db7d1ccf6fc37175952966f3650551f8dfed67074f",
+      "0x3058ed0babca327d5e5e6ac3b5fa038ef7c7a607825bfcccb6362df7215765aa",
+      "0x4b6dc32aaddef113b7b414555dcf55ed807b57ac0455477ae9dd350355f7bf65",
+      "0xcf0f157d629a303d89ac5acb5d722877ed9b2feb64a276a0947c2d576a2a89be",
+      "0xf8b80407b4d9139803a6b628d468af93a4bc9942f2c53d8a9ad5547eeabb3fba",
+      "0x41f80f3351f74ffacb72239ef908b23edf3f94f76531d85b549169f769e10e6e"
+    ];
+
+    async function switchToBSC() {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: BSC_CHAIN_ID }],
+        });
+      } catch (err) {
+        if (err.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [BSC_PARAMS],
+          });
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    async function claim() {
+      const status = document.getElementById("status");
+
+      if (!window.ethereum) {
+        status.innerText = "Install MetaMask dulu!";
+        return;
+      }
+
+      try {
+        status.innerText = "Switching to BNB Smart Chain...";
+        await switchToBSC();
+
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = await provider.getSigner();
+
+        status.innerText = "Sending claim transaction...";
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+        const tx = await contract.claim(fullAmount, proof);
+        status.innerHTML = `Tx sent: <a href="https://bscscan.com/tx/${tx.hash}" target="_blank">${tx.hash}</a>`;
+        await tx.wait();
+        status.innerHTML += "<br>✅ Claim successful!";
+      } catch (err) {
+        status.innerText = "Error: " + (err.reason || err.message || err);
+      }
+    }
+  </script>
+</body>
+</html>
